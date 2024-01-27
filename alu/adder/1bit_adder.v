@@ -1,4 +1,4 @@
-module  bit_adder(S, Cout, A, B, Cin);
+module bit_adder(S, Cout, A, B, Cin);
     input A, B, Cin;
     output S, Cout;
     
