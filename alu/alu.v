@@ -6,7 +6,7 @@ module alu(data_operandA, data_operandB, ctrl_ALUopcode, ctrl_shiftamt, data_res
     output isNotEqual, isLessThan, overflow;  // extra ADD/SUB outputs TODO: implement isNotEqual
 
     wire [31:0] sum, AND, OR, SLL, SRA, updated_operandB;
-    wire carry_in, carry_out, w1, w2, w3, w4, w5;
+    wire carry_in, carry_out, w1, w2, w3, w4;
     // sections of the ALU
     cnot sub_flip(updated_operandB, data_operandB, ctrl_ALUopcode[0]);
     assign carry_in = ctrl_ALUopcode[0];
@@ -26,7 +26,7 @@ module alu(data_operandA, data_operandB, ctrl_ALUopcode, ctrl_shiftamt, data_res
 
     // extra info for ADD/SUB
     xor diff(w3, data_operandA[31], data_operandB[31]);
-    assign isLessThan = diff ? data_operandA[31] : sum[31];
-    or_32 or2(w3, sum);
-    or ne(isNotEqual, w3, overflow);
+    assign isLessThan = w3 ? data_operandA[31] : sum[31];
+    or_32 or2(w4, sum);
+    or ne(isNotEqual, w4, overflow);
 endmodule
