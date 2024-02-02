@@ -1,16 +1,47 @@
 module comp_2(EQ1, GT1, A, B, EQ0, GT0);
-    input EQ0, GT0;
+    input EQ1, GT1;
     input [1:0] A, B;
-    output EQ1, GT1;
+    output EQ0, GT0;
 
 
-    wire notB0, notGT, w1, w2;
-    not n1(notB0, B[0]);
-    not n2(notGT, GT0);
-    mux_8bit m1(w1, {A, B[1]}, 'b0, 'b0, notB0, 'b0, 'b1, 'b0, 'b1, notB0);
-    or o1(GT1, w1, GT0);
+    //notA and notB
+    wire[1:0] notA, notB;
 
-    // AND(EQ(i+1), NXOR(A0, B0), NXOR(A1, B1))
-    mux_8bit m2(w2, {A[1], A[0], B[1]}, notB0, 'b0, B[0], 'b0, 'b0, notB0, 'b0, B[0]);
-    and a1(EQ1, w2, EQ0, notGT);
+    not n1(notA[1], A[1]);
+    not n1(notA[0], A[0]);
+    not n1(notB[1], B[1]);
+    not n1(notB[0], B[0]);
+
+    wire selectBits[2:1];
+
+    assign selectBits[2] = A[1];
+    assign selectBits[1] = A[0];
+    assign selectBits[0] = B[1];
+
+
+    wire eqmux, gtmux;
+    
+    mux_8bit EQout(eqmux, selectBits, notB[0], 1'b0, B[0], 1'b0, 1'b0, notB[0], 1'b0, B[0]);
+
+    mux_8bit GTout(gtmux, selectBits, 1'b0, 1'b0, notB[0], 1'b0, 1'b1, 1'b0, 1'b1, notB[0]);
+
+
+    //evaluating EQ_out
+    wire EQandnotGTin, notGT1, notEQ1;
+
+    not notGTinand(notGT1, GT1);
+    not notEQinand(notEQ1, EQ1);
+
+    wire EQ1andnotGT1forEQ0;
+
+
+    and jeronimo(EQ0, eqmux, EQ1, notGT1);
+
+    wire justin, smith;
+
+    and jj(justin, gtmux, EQ1, notGT1);
+    and ss(smith, notEQ1, GT1);
+
+    or suckItBozo(GT0, justin, smith);
+
 endmodule
