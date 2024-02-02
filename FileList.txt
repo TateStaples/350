@@ -1,5 +1,4 @@
 ./alu/alu.v
-./alu/alu_tb.v
 ./alu/adder/carry_look_ahead_adder.v
 ./alu/adder/cla_8.v
 ./alu/adder/cnot.v
