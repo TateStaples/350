@@ -12,18 +12,31 @@ module regfile (
 	output [31:0] data_readRegA, data_readRegB;
 
 	// add your code here
-	wire [31:0] register [31:0];
-	assign register0 = 32'b0;
-	
-	genvar i;
-	generate  // update the register
-		for (i=1; i<32; i=i+1) begin  // TODO: figure out how to use ctrl_writeReg
-			register dffe_ref0(register[i], data_writeReg, clock, ctrl_writeEnable, ctrl_reset);  // q, d, clk, en, clr
-		end
-	endgenerate
+	wire [31:0] wHot, aHot, bHot, zero_out;
+	// one-hot encoding
+	decoder32 writeHot(.out(wHot), .select(ctrl_writeReg), .enable(1'b1));
+	decoder32 readAHot(.out(aHot), .select(ctrl_readRegA), .enable(1'b1));
+	decoder32 readBHot(.out(bHot), .select(ctrl_readRegB), .enable(1'b1));
 
+	// reg 0 - hardwired to 0
+	assign zero_out = 32'b0;
+	tristate zero_tri1(.in(zero_out), .en(aHot[0]), .out(data_readRegA));
+	tristate zero_tri2(.in(zero_out), .en(bHot[0]), .out(data_readRegB));
 
-	// read the register
-	mux_32 readA(data_readRegA, ctrl_readRegA, register[0], register[1], register[2], register[3], register[4], register[5], register[6], register[7], register[8], register[9], register[10], register[11], register[12], register[13], register[14], register[15], register[16], register[17], register[18], register[19], register[20], register[21], register[22], register[23], register[24], register[25], register[26], register[27], register[28], register[29], register[30], register[31]);
-	mux_32 readB(data_readRegB, ctrl_readRegB, register[0], register[1], register[2], register[3], register[4], register[5], register[6], register[7], register[8], register[9], register[10], register[11], register[12], register[13], register[14], register[15], register[16], register[17], register[18], register[19], register[20], register[21], register[22], register[23], register[24], register[25], register[26], register[27], register[28], register[29], register[30], register[31]);
+   genvar i;
+   generate
+        for (i = 1; i < 32; i = i + 1) begin: loop1
+            wire[31:0] reg_out;
+			wire writing;
+
+			and andgate(writing, wHot[i], ctrl_writeEnable);
+
+			register theReg(.q(reg_out), .d(data_writeReg), .clk(clock), .en(writing), .clr(ctrl_reset));
+
+			//tristate of outputs
+			tristate outA(.in(reg_out), .en(aHot[i]), .out(data_readRegA));
+			tristate outB(.in(reg_out), .en(bHot[i]), .out(data_readRegB));
+        end
+
+   endgenerate
 endmodule

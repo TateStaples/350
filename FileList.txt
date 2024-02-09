@@ -27,6 +27,7 @@
 ./mux/mux4bit.v
 ./mux/mux8.v
 ./mux/mux8bit.v
+./mux/decoder32.v
 ./alu/comparators/comp_2.v
 ./alu/comparators/comp_4.v
 ./alu/comparators/comp_8.v
@@ -35,4 +36,5 @@
 ./registers/dffe_ref.v
 ./registers/regfile.v
 ./registers/register.v
-comp_2_tb.v
+./registers/tristate.v
+./regfile_tb.v
