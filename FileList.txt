@@ -1,5 +1,8 @@
 ./alu/alu.v
 ./alu/adder/carry_look_ahead_adder.v
+./alu/adder/1bit_adder.v
+./alu/adder/abs.v
+./alu/adder/twos_complement.v
 ./alu/adder/cla_8.v
 ./alu/adder/cnot.v
 ./alu/logic/bitwise_and_32.v
@@ -36,5 +39,8 @@
 ./registers/dffe_ref.v
 ./registers/regfile.v
 ./registers/register.v
+./registers/register64.v
 ./registers/tristate.v
-./regfile_tb.v
+./multdiv/multdiv.v
+./multdiv/wallaceTreee.v
+./multdiv_tb.v
