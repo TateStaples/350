@@ -23,15 +23,20 @@ module wallaceTreeMultiplier(
 # partial product - either 0 or shifted input
 log(f'wire [{INPUT_SIZE-1}:0] {", ".join([f"partialProduct_{i}" for i in range(INPUT_SIZE)])};')
 for i in range(INPUT_SIZE):
-    log(f'assign partialProduct_{i} = data_operandA & {"{"}{INPUT_SIZE}{"{"}data_operandB[{i}]{"}"}{"}"};')
+    for j in range(INPUT_SIZE):
+        NOT = (i < INPUT_SIZE - 1 and j == INPUT_SIZE-1) or (i == INPUT_SIZE-1 and j < INPUT_SIZE-1)
+        log(f'assign partialProduct_{i}[{j}] = data_operandA[{j}] {"~" if NOT else ""}& {"{"}{INPUT_SIZE}{"{"}data_operandB[{i}]{"}"}{"}"};')
+
 
 # Sum partial products
-TABLE = [[None] * (OUTPUT_SIZE-1) for _ in range(INPUT_SIZE)]
+TABLE = [[None] * (OUTPUT_SIZE) for _ in range(INPUT_SIZE)]
 wire_counter = 0
 add_counter = 0
 for partial_product in range(INPUT_SIZE):
     for shift in range(INPUT_SIZE):
         TABLE[partial_product][partial_product+shift] = str(f'partialProduct_{partial_product}[{shift}]')
+TABLE[0][INPUT_SIZE] = "1'b0"
+TABLE[INPUT_SIZE-1][OUTPUT_SIZE-1] = "1'b0"
 def reduce(table):
     global wire_counter, add_counter
     # for row in table:
@@ -43,11 +48,11 @@ def reduce(table):
     new_table = []
     for i in range(0, len(table)-2, 3):
         # reduce
-        assert len(table[i]) == OUTPUT_SIZE-1
+        # print(len(table), len(table[i]), OUTPUT_SIZE, i)
+        assert len(table[i]) == OUTPUT_SIZE
         s = []
         cout = [None]
-        for col in range(OUTPUT_SIZE-1):
-            AND = '&' if col < OUTPUT_SIZE-2 else ''
+        for col in range(OUTPUT_SIZE):
             items = table[i][col], table[i+1][col], table[i+2][col]
             size = 3 - items.count(None)
             if size == 1:
@@ -60,7 +65,7 @@ def reduce(table):
                 cout_wire = f'wire_{wire_counter+1}'
                 log(f'wire {s_wire}, {cout_wire};')
                 log(f'assign {s_wire} = {items[0]} ^ {items[1]};')
-                log(f'assign {cout_wire} = {items   1[0]} & {items[1]};')
+                log(f'assign {cout_wire} = {items[0]} & {items[1]};')
                 s.append(s_wire)
                 cout.append(cout_wire)
                 wire_counter += 2
@@ -79,6 +84,7 @@ def reduce(table):
                 cout.append(None)
         new_table.append(s)
         new_table.append(cout[:-1])
+        # print(len(s), len(cout))
     for missed in range(len(table)//3*3, len(table)):
         new_table.append(table[missed])
     return reduce(new_table)
@@ -107,7 +113,6 @@ for i, wire in enumerate(result):
     log(f'assign data_result[{i}] = {wire};')
 # log("wire burner;")
 # log(f"bit_adder add_final_bit(.S(data_result[{OUTPUT_SIZE-1}]), .Cout(burner),  .A(1'b1), .B(1'b0), .Cin({carry_in}));")
-log(f"assign data_result[{OUTPUT_SIZE-1}] = {carry_in};")
 log(f'''
 wire andOverflow, orOverflow;
 assign andOverflow = &data_result[{OUTPUT_SIZE-1}:{INPUT_SIZE}];

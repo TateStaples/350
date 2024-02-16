@@ -41,6 +41,9 @@
 ./registers/register.v
 ./registers/register64.v
 ./registers/tristate.v
+./registers/T_flip_flop.v
 ./multdiv/multdiv.v
+./multdiv/divider.v
+./multdiv/counter64.v
 ./multdiv/wallaceTreee.v
 ./multdiv_tb.v

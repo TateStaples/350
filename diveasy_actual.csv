@@ -1,0 +1,4 @@
+OperandA, OperandB, Result, Exception
+          2,          1,          2,0
+         -4,          2,         -2,0
+          8,          4,          2,0

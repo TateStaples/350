@@ -24,20 +24,18 @@ module multdiv(
     // Divider
     wire[31:0] divQuotient, divRemainder;
     wire divReady, divException;
-    // divider div (.data_operandA(absA), .data_operandB(absB), .clock(clock), .ctrl_DIV(ctrl_DIV), .data_quotient(divQuotient), .data_remainder(divRemainder), .data_exception(divException), .data_resultRDY(divReady));
+    divider div (.data_operandA(absA), .data_operandB(absB), .clock(clock), .ctrl_DIV(ctrl_DIV), .data_quotient(divQuotient), .data_remainder(divRemainder), .data_exception(divException), .data_resultRDY(divReady));
 
     // Control
-    wire mode; //0 = multiply, 1 = divide
-    dffe_ref setMode(.q(mode), .d(ctrl_DIV), .clk(clock), .en(ctrl_DIV), .clr(ctrl_MULT)); //register is 0 if mult, 1 if divide
-
-    assign data_resultRDY = mode ? divReady : multReady;                                    // OUTPUT: select active mode
+    wire mode;
+    dffe_ref setMode(.q(mode), .d(ctrl_DIV), .clk(clock), .en(ctrl_DIV), .clr(ctrl_MULT));  // 0 = multiply, 1 = divide
 
     wire [31:0] absResult, negResult;
-    wire outputSign, operationException;
-    mux_2 setOut(.out(absResult), .select(mode), .in0(out64[31:0]), .in1(divQuotient));   
+    wire outputSign, operationException; 
+    assign absResult = mode ? divQuotient : out64[31:0];                                    
     twos_complement twos_complement1(.out(negResult), .in(absResult));            
     xor outputSign1(outputSign, data_operandA[31], data_operandB[31]);
     assign data_result = outputSign ? negResult : absResult;                                // OUTPUT: select active result
-    assign operationException = mode ? divException : multException;                         
-    or operationException1(data_exception, operationException);                             // OUTPUT: select active exception
+    assign data_exception = mode ? divException : multException;                            // OUTPUT: select active exception
+    assign data_resultRDY = mode ? divReady : multReady;                                    // OUTPUT: select active mode
 endmodule
