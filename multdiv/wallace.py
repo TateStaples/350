@@ -47,6 +47,7 @@ def reduce(table):
         s = []
         cout = [None]
         for col in range(OUTPUT_SIZE-1):
+            AND = '&' if col < OUTPUT_SIZE-2 else ''
             items = table[i][col], table[i+1][col], table[i+2][col]
             size = 3 - items.count(None)
             if size == 1:
@@ -59,7 +60,7 @@ def reduce(table):
                 cout_wire = f'wire_{wire_counter+1}'
                 log(f'wire {s_wire}, {cout_wire};')
                 log(f'assign {s_wire} = {items[0]} ^ {items[1]};')
-                log(f'assign {cout_wire} = {items[0]} & {items[1]};')
+                log(f'assign {cout_wire} = {items   1[0]} & {items[1]};')
                 s.append(s_wire)
                 cout.append(cout_wire)
                 wire_counter += 2
