@@ -46,4 +46,8 @@
 ./multdiv/divider.v
 ./multdiv/counter64.v
 ./multdiv/wallaceTreee.v
-./multdiv_tb.v
+./processor/processor.v
+./processor/RAM.v
+./processor/ROM.v
+./processor/Wrapper.v
+./Wrapper_tb.v

@@ -1,12 +1,12 @@
 module divider(
     data_operandA, data_operandB, // inputs: (positive numbers)
-    clock, ctrl_DIV, // control
+    clock, reset, // control
     data_quotient, data_remainder, data_exception, data_resultRDY);  // outputs
     
     parameter DIV_SIZE = 32;
     input [DIV_SIZE-1:0] data_operandA, data_operandB;
     input clock;
-    input ctrl_DIV; 
+    input reset; 
 
     output [DIV_SIZE-1:0] data_quotient, data_remainder;
     output data_exception, data_resultRDY;
@@ -14,16 +14,16 @@ module divider(
     wire[2*DIV_SIZE-1:0] R, R_out, R_init, R_in, result; 
 
 
-    counter64 counter1(.clock(clock), .reset(ctrl_DIV), .count(count));
+    counter64 counter1(.clock(clock), .reset(reset), .count(count));
     
     // always @(posedge clock) begin
-        // if (ctrl_DIV) $display("Reset activated at time %t\n", $time);
+        // if (reset) $display("Reset activated at time %t\n", $time);
         // $display("A = %d, B/ = %d, Q = %d, rdy? = %b, mod = %d, c = %d,\nR \t= %b, \ninit \t= %b, \nin \t= %b, \nshft\t= %b,\nout \t= %b, \nres \t= %b\n",
                 // data_operandA, data_operandB, data_quotient, data_resultRDY, data_remainder, count, R, R_init, R_in, shifted, R_out, result);
     // end
     assign R_init[2*DIV_SIZE-1:DIV_SIZE] = 32'b0; 
     assign R_init[DIV_SIZE-1:0] = data_operandA[DIV_SIZE-1:0];   // Quotient
-    assign R_in = ctrl_DIV ? R_init : R_out;
+    assign R_in = reset ? R_init : R_out;
     register64 reg1(.q(R), .d(R_in), .clk(clock), .en(1'b1)); // takes 1 cycle to set out.
     // Key: R = remainder, Q = quotient, D = divisor
     wire [31:0] D, negD, activeD;
@@ -47,7 +47,7 @@ module divider(
     wire t33;
     assign t33 = count[5] & ~count[4] & ~count[3] & ~count[2] & ~count[1] & ~count[0];
     assign data_resultRDY = t33;
-    register64 reg2(.q(result), .d(R_in), .clk(clock), .en(1'b1), .clr(ctrl_DIV));
+    register64 reg2(.q(result), .d(R_in), .clk(clock), .en(1'b1), .clr(reset));
 
     wire[DIV_SIZE-1:0] restore, unrestore;
     assign unrestore = result[2*DIV_SIZE-1:DIV_SIZE];
