@@ -63,7 +63,7 @@ module processor(
 	input [31:0] data_readRegA, data_readRegB;
 
 	/* YOUR CODE STARTS HERE */
-    wire [31:0] new_instruction, D_PC, D_PC_in, X_PC, M_PC, W_PC, D_instr, D_instr_in, F_instr, X_instr_in, X_instr_out, M_instr, W_instr, D_A, D_B, X_A, X_B, M_D, M_B, W_D, W_out, ALU_out, multdiv_out, X_out;
+    wire [31:0] new_instruction, D_PC, D_PC_in, X_PC, M_PC, W_PC, D_instr, D_instr_out, F_instr, X_instr_in, X_instr_out, M_instr, W_instr, D_A, D_B, X_A, X_B, M_D, M_B, W_D, W_out, ALU_out, multdiv_out, X_out;
     // Latch holds: A, B, instruction
     // ------ latches ------ //
     // PC latch 
@@ -74,16 +74,16 @@ module processor(
     assign active_PC = conditional_branch ? X_PC : address_imem;
     carry_look_ahead_adder PCadder(.num1(active_PC), .num2(increment), .sum(next_instr), .carry_in(1'b1), .carry_out(w1));
     assign set_PC = jumping ? jump_destination : next_instr;
-    register PC_reg(.clk(~clock), .d(set_PC), .q(PC), .en(~stall&~hazard), .clr(reset)); 
+    register PC_reg(.clk(~clock), .d(set_PC), .q(PC), .en(~stall && ~hazard), .clr(reset)); 
     // PC latch
-    register FD_PC(.clk(~clock), .d(PC), .q(D_PC_in), .en(~stall&~hazard), .clr(reset));  
+    register FD_PC(.clk(~clock), .d(PC), .q(D_PC_in), .en(~stall && ~hazard), .clr(reset));  
     assign D_PC = (hazard | flush) ? 32'b0 : D_PC_in;
     register DX_PC(.clk(~clock), .d(D_PC), .q(X_PC), .en(~stall), .clr(reset));
     // Instruction latch
     assign F_instr = (flush) ? 32'b0 : q_imem;
-    register FD_instr(.clk(~clock), .d(F_instr), .q(D_instr_in), .en(~stall&~hazard), .clr(reset));
-    assign D_instr = (hazard | flush) ? 32'b0 : D_instr_in;
-    register DX_instr(.clk(~clock), .d(D_instr), .q(X_instr_in), .en(~stall), .clr(reset | hazard));
+    register FD_instr(.clk(~clock), .d(F_instr), .q(D_instr), .en(~stall && ~hazard), .clr(reset));
+    assign D_instr_out = (hazard | flush) ? 32'b0 : D_instr;
+    register DX_instr(.clk(~clock), .d(D_instr_out), .q(X_instr_in), .en(~stall), .clr(reset));
     register XM_instr(.clk(~clock), .d(X_instr_out), .q(M_instr), .en(~stall), .clr(reset));
     register MW_instr(.clk(~clock), .d(M_instr), .q(W_instr), .en(~stall), .clr(reset));
 
@@ -106,7 +106,6 @@ module processor(
     instruction_registers instr_regs(.instr(D_instr), .regA(ctrl_readRegA), .regB(ctrl_readRegB));  // O: Register to read from ports A&B of RegFile
     assign D_A = isJalD ? D_PC  : data_readRegA;                                                    // I: Data from port A of RegFile
     assign D_B = isJalD ? 32'd1 : data_readRegB;                                                    // I: Data from port B of RegFile
-    // hazard = LOAD && (overwrite directory)
     assign hazard = (isLwX) && ((ctrl_readRegA === X_writeback_reg && X_writeback_reg != 5'b0) || (ctrl_readRegB === X_writeback_reg && ~isSwD && X_writeback_reg != 5'b0));
     // ------ execute (X) ------ //
     // add  00000 (00000)  R add $rd, $rs, $rt    $rd = $rs + $rt

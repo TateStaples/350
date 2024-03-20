@@ -15,9 +15,9 @@ Cycle  61: Wrote 4 into register 30
 Cycle  65: Wrote 202 into register 21
 Cycle  69: Wrote 1616 into register 21
 Cycle  73: Wrote 1620 into register 21
-Cycle  78: Wrote 5 into register 30
-Cycle  82: Wrote 12960 into register 21
-Cycle  86: Wrote 12965 into register 21
+Cycle  77: Wrote 5 into register 30
+Cycle  81: Wrote 12960 into register 21
+Cycle  85: Wrote 12965 into register 21
 ============== Testing Mode ==============
 Reg  0:           0
 Reg  1:           1
