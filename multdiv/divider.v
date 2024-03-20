@@ -18,7 +18,9 @@ module divider(
     
     // always @(posedge clock) begin
         // if (reset) $display("Reset activated at time %t\n", $time);
-        // $display("A = %d, B/ = %d, Q = %d, rdy? = %b, mod = %d, c = %d,\nR \t= %b, \ninit \t= %b, \nin \t= %b, \nshft\t= %b,\nout \t= %b, \nres \t= %b\n",
+        // $display("A = %d, B = %d, Q = %d, rdy? = %b, mod = %d, c = %d,\nR \t= %b, \ninit \t= %b, \nin \t= %b, \nshft\t= %b,\nout \t= %b, \nres \t= %b\n",
+                // data_operandA, data_operandB, data_quotient, data_resultRDY, data_remainder, count, R, R_init, R_in, shifted, R_out, result);
+        // $display("A = %d, B = %d, Q = %d, rdy? = %b, mod = %d, c = %d,\nR \t= %b, \ninit \t= %b, \nin \t= %b, \nshft\t= %b,\nout \t= %b, \nres \t= %b\n",
                 // data_operandA, data_operandB, data_quotient, data_resultRDY, data_remainder, count, R, R_init, R_in, shifted, R_out, result);
     // end
     assign R_init[2*DIV_SIZE-1:DIV_SIZE] = 32'b0; 
@@ -52,7 +54,7 @@ module divider(
     wire[DIV_SIZE-1:0] restore, unrestore;
     assign unrestore = result[2*DIV_SIZE-1:DIV_SIZE];
     carry_look_ahead_adder adder2(.sum(restore), .num1(result[2*DIV_SIZE-1:DIV_SIZE]), .num2(D), .carry_in(1'b0), .carry_out());
-    assign data_quotient = data_exception ? 32'b0 : result[DIV_SIZE-1:0];
+    assign data_quotient = (data_exception) ? 32'b0 : result[DIV_SIZE-1:0];
     assign data_remainder = result[63] ? restore : unrestore;
     assign data_exception = ~(|data_operandB); 
 endmodule

@@ -19,12 +19,12 @@ module multdiv(
     // Multiplier
     wire[63:0] out64;
     wire multReady, multException;
-    wallaceTreeMultiplier mult(.data_operandA(absA), .data_operandB(absB), .clock(clock), .data_result(out64), .data_exception(multException), .data_resultRDY(multReady), .reset(ctrl_DIV | mode));
+    wallaceTreeMultiplier mult(.data_operandA(absA), .data_operandB(absB), .clock(clock), .data_result(out64), .data_exception(multException), .data_resultRDY(multReady), .reset());
 
     // Divider
     wire[31:0] divQuotient, divRemainder;
     wire divReady, divException;
-    divider div (.data_operandA(absA), .data_operandB(absB), .clock(clock), .reset(ctrl_MULT), .data_quotient(divQuotient), .data_remainder(divRemainder), .data_exception(divException), .data_resultRDY(divReady));
+    divider div (.data_operandA(absA), .data_operandB(absB), .clock(clock), .reset(ctrl_DIV), .data_quotient(divQuotient), .data_remainder(divRemainder), .data_exception(divException), .data_resultRDY(divReady));
 
     // Control
     wire mode, weirdCase;
@@ -38,5 +38,5 @@ module multdiv(
     assign weirdCase = (data_operandA[31] ^ data_operandB[31]) ^ data_result[31];
     assign data_result = outputSign ? negResult : absResult;                                // OUTPUT: select active result
     assign data_exception = mode ? divException : (multException | weirdCase) & |data_operandA & |data_operandB;                            // OUTPUT: select active exception
-    assign data_resultRDY = divReady || multReady;                                    // OUTPUT: select active mode
+    assign data_resultRDY = divReady || (multReady && ctrl_MULT);                                    // OUTPUT: select active mode
 endmodule

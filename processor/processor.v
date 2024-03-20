@@ -63,25 +63,28 @@ module processor(
 	input [31:0] data_readRegA, data_readRegB;
 
 	/* YOUR CODE STARTS HERE */
-    wire [31:0] new_instruction, D_PC, X_PC, M_PC, W_PC, D_instr, X_instr_in, X_instr_out, M_instr, W_instr, D_A, D_B, X_A, X_B, M_D, M_B, W_D, W_out, ALU_out, multdiv_out, X_out;
+    wire [31:0] new_instruction, D_PC, D_PC_in, X_PC, M_PC, W_PC, D_instr, D_instr_in, F_instr, X_instr_in, X_instr_out, M_instr, W_instr, D_A, D_B, X_A, X_B, M_D, M_B, W_D, W_out, ALU_out, multdiv_out, X_out;
     // Latch holds: A, B, instruction
     // ------ latches ------ //
     // PC latch 
     wire [31:0] PC, PC_init, next_instr, increment, set_PC, active_PC;
     wire w1;
     assign PC_init = 32'd0;
-    assign increment = conditional_branch ? conditional_increment : 32'd0;  // Allow for relative branching, TODO: add nop here sometimes
+    assign increment = conditional_branch ? conditional_increment : 32'd0;  // Allow for relative branching
     assign active_PC = conditional_branch ? X_PC : address_imem;
     carry_look_ahead_adder PCadder(.num1(active_PC), .num2(increment), .sum(next_instr), .carry_in(1'b1), .carry_out(w1));
     assign set_PC = jumping ? jump_destination : next_instr;
     register PC_reg(.clk(~clock), .d(set_PC), .q(PC), .en(~stall), .clr(reset)); 
     // PC latch
-    register FD_PC(.clk(~clock), .d(PC), .q(D_PC), .en(~stall), .clr(reset | flush));  // TODO: add nop here sometimes (bubbles)
+    register FD_PC(.clk(~clock), .d(PC), .q(D_PC_in), .en(~stall), .clr(reset));  // TODO: add nop here sometimes (bubbles)
+    assign D_PC = (hazard | flush) ? 32'b0 : D_PC_in;
     register DX_PC(.clk(~clock), .d(D_PC), .q(X_PC), .en(~stall), .clr(reset));
     register XM_PC(.clk(~clock), .d(X_PC), .q(M_PC), .en(~stall), .clr(reset)); 
     register MW_PC(.clk(~clock), .d(M_PC), .q(W_PC), .en(~stall), .clr(reset));
     // Instruction latch
-    register FD_instr(.clk(~clock), .d(q_imem), .q(D_instr), .en(~stall), .clr(reset | flush));
+    assign F_instr = (hazard | flush) ? 32'b0 : q_imem;
+    register FD_instr(.clk(~clock), .d(F_instr), .q(D_instr_in), .en(~stall), .clr(reset));
+    assign D_instr = (hazard | flush) ? 32'b0 : D_instr_in;
     register DX_instr(.clk(~clock), .d(D_instr), .q(X_instr_in), .en(~stall), .clr(reset));
     register XM_instr(.clk(~clock), .d(X_instr_out), .q(M_instr), .en(~stall), .clr(reset));
     register MW_instr(.clk(~clock), .d(M_instr), .q(W_instr), .en(~stall), .clr(reset));
@@ -90,7 +93,7 @@ module processor(
     register DX_A(.clk(~clock), .d(D_A), .q(X_A), .en(~stall), .clr(reset));
     register DX_B(.clk(~clock), .d(D_B), .q(X_B), .en(~stall), .clr(reset));
     register XM_data(.clk(~clock), .d(X_out), .q(M_D), .en(~stall), .clr(reset));
-    register XM_B(.clk(~clock), .d(BypassX_B), .q(M_B), .en(~stall), .clr(reset));
+    register XM_B(.clk(~clock), .d(BypassedX_B), .q(M_B), .en(~stall), .clr(reset));
     register MW_Res(.clk(~clock), .d(W_D), .q(W_out), .en(~stall), .clr(reset));
     // ------ fetch (F) ------ //
     assign address_imem = reset ? PC_init : PC;
@@ -100,11 +103,13 @@ module processor(
     // I type: Opcode [31:27], Dest [26:22], A [21:17], Immediate [16:0]
     // J1 type: Opcode [31:27], Target [26:0]
     // J2 type: Opcode [31:27], RD [26:22]
-    wire isJalD;
-    get_instr get_instrD(.opcode(D_instr[31:27]), .ALU_opcode(D_instr[6:2]), .isJal(isJalD));
+    wire isJalD, isSwD, isDivD, hazard;
+    get_instr get_instrD(.opcode(D_instr[31:27]), .ALU_opcode(D_instr[6:2]), .isJal(isJalD), .isSw(isSwD), .isDiv(isDivD));
     instruction_registers instr_regs(.instr(D_instr), .regA(ctrl_readRegA), .regB(ctrl_readRegB));  // O: Register to read from ports A&B of RegFile
-    assign D_A = isJalD ? D_PC  : data_readRegA;                                            // I: Data from port A of RegFile
-    assign D_B = isJalD ? 32'd1 : data_readRegB;                                            // I: Data from port B of RegFile
+    assign D_A = isJalD ? D_PC  : data_readRegA;                                                    // I: Data from port A of RegFile
+    assign D_B = isJalD ? 32'd1 : data_readRegB;                                                    // I: Data from port B of RegFile
+    // hazard = LOAD && (overwrite directory)
+    assign hazard = (X_instr_in[31:27] === 5'b01000) && ((ctrl_readRegA === X_writeback_reg && X_writeback_reg != 5'b0 && X_will_writeback) || (ctrl_readRegB === X_writeback_reg && ~isSwD && X_writeback_reg != 5'b0 && X_will_writeback));
     // ------ execute (X) ------ //
     // add  00000 (00000)  R add $rd, $rs, $rt    $rd = $rs + $rt
     // addi 00101          I addi $rd, $rs, N     $rd = $rs + N
@@ -122,20 +127,20 @@ module processor(
     assign immediate_I = {{15{X_instr_in[16]}}, X_instr_in[16:0]};
     assign target_J1 = {{5'b0}, X_instr_in[26:0]};
 
-    wire [31:0] ALU_A, ALU_B, BypassX_A, BypassX_B;
-    wire [4:0] ALU_opcode, regA_X, regB_X, M_writeback_reg;
-    wire bypassMX_A, bypassMX_B, bypassWX_A, bypassWX_B, M_will_writeback;
-    instruction_registers instr_regsM(.instr(M_instr), .writeback_reg(M_writeback_reg), .will_writeback(M_will_writeback));
-    instruction_registers instr_regsX(.instr(X_instr_in), .regA(regA_X), .regB(regB_X)); 
+    wire [31:0] ALU_A, ALU_B, BypassedX_A, BypassedX_B;
+    wire [4:0] ALU_opcode, regA_X, regB_X, regB_M, M_writeback_reg, X_writeback_reg;
+    wire bypassMX_A, bypassMX_B, bypassWX_A, bypassWX_B, M_will_writeback, X_will_writeback;
+    instruction_registers instr_regsM(.instr(M_instr), .regB(regB_M), .writeback_reg(M_writeback_reg), .will_writeback(M_will_writeback));
+    instruction_registers instr_regsX(.instr(X_instr_in), .regA(regA_X), .regB(regB_X), .writeback_reg(X_writeback_reg), .will_writeback(X_will_writeback)); 
     // TODO: add the bypasses here [MX, WX], I think this should only be registers, TODO: hazard if isLW_M
-    assign bypassWX_A = (ctrl_writeEnable & regA_X === ctrl_writeReg);
-    assign bypassWX_B = (ctrl_writeEnable & regB_X === ctrl_writeReg);
-    assign bypassMX_A = (M_will_writeback & regA_X === M_writeback_reg);
-    assign bypassMX_B = (M_will_writeback & regB_X === M_writeback_reg);
-    assign BypassX_A = bypassMX_A ? M_D : (bypassWX_A ? data_writeReg: X_A);
-    assign BypassX_B = bypassMX_B ? M_D : (bypassWX_B ? data_writeReg: X_B);
-    assign ALU_A = BypassX_A;  
-    assign ALU_B = (isSwX | isLwX | isAddiX) ? immediate_I : BypassX_B;  // MUX with immediate selection
+    assign bypassWX_A = (ctrl_writeEnable & regA_X === ctrl_writeReg & regA_X != 5'b0);
+    assign bypassWX_B = (ctrl_writeEnable & regB_X === ctrl_writeReg & regB_X != 5'b0);
+    assign bypassMX_A = (M_will_writeback & regA_X === M_writeback_reg & regA_X != 5'b0);
+    assign bypassMX_B = (M_will_writeback & regB_X === M_writeback_reg & regB_X != 5'b0);
+    assign BypassedX_A = bypassMX_A ? M_D : (bypassWX_A ? data_writeReg: X_A);
+    assign BypassedX_B = bypassMX_B ? M_D : (bypassWX_B ? data_writeReg: X_B);
+    assign ALU_A = BypassedX_A;  
+    assign ALU_B = (isSwX | isLwX | isAddiX) ? immediate_I : BypassedX_B;  // MUX with immediate selection
     assign ALU_opcode = R_typeX ? X_instr_in[6:2] : 5'b0;
     alu ALU(.data_operandA(ALU_A), .data_operandB(ALU_B), .ctrl_ALUopcode(ALU_opcode), .ctrl_shiftamt(X_instr_in[11:7]), .data_result(ALU_out), .isNotEqual(isNotEqual), .isLessThan(isLessThan), .overflow(overflow));
 
@@ -147,7 +152,7 @@ module processor(
     pulse_generator mult_pulse(.clk(clock), .in_signal(isMulX), .out_pulse(mult));
     pulse_generator div_pulse(.clk(clock), .in_signal(isDivX), .out_pulse(div));
     assign is_multdiv = isMulX | isDivX;
-    multdiv multdivUnit(.data_operandA(BypassX_A), .data_operandB(BypassX_B), .ctrl_MULT(mult), .ctrl_DIV(div), .data_result(multdiv_out), .data_exception(multdiv_exception), .data_resultRDY(multdiv_RDY), .clock(clock));
+    multdiv multdivUnit(.data_operandA(BypassedX_A), .data_operandB(BypassedX_B), .ctrl_MULT(mult), .ctrl_DIV(div), .data_result(multdiv_out), .data_exception(multdiv_exception), .data_resultRDY(multdiv_RDY), .clock(clock));
     assign stall = isDivX & !multdiv_RDY & !multdiv_exception; 
 
     wire [31:0] X_out_math, X_out_branch, X_out_exception, X_instr_branch, X_instr_exception;
@@ -195,14 +200,14 @@ module processor(
     // ------ memory (M) ------ //
     // sw OPCODE=00111 TYPE=I USAGE="sw $rd, N($rs)" RESULT="MEM[$rs + N] = $rd" 
     // lw OPCODE=01000 TYPE=I USAGE="lw $rd, N($rs)" RESULT="$rd = MEM[$rs + N]"
-    wire isSW_M, isLW_M;
-    assign isSW_M = (M_instr[31:27] == 5'b00111);
-    assign isLW_M = (M_instr[31:27] == 5'b01000);
-    assign address_dmem = M_D;             // O: The address of the data to get or put from/to dmem
+    wire isSW_M, isLW_M, isDivM, bypassWM;
+    get_instr get_instrM(.opcode(M_instr[31:27]), .ALU_opcode(M_instr[6:2]), .isSw(isSW_M), .isLw(isLW_M), .isDiv(isDivM));
+    assign address_dmem = M_D;                          // O: The address of the data to get or put from/to dmem
     // TODO: add the WM bypasses here
-    assign data = (ctrl_writeEnable & ctrl_writeReg === M_instr[26:22]) ? data_writeReg : M_B;  // O: The data to write to dmem (data) [WM bypass]
-    assign wren = isSW_M;                                                                         // O: Write enable for dmem (data)
-    assign W_D = isLW_M ? q_dmem : M_D;                                                           // I: The data from dmem (data)
+    assign bypassWM = (ctrl_writeEnable && (regB_M === ctrl_writeReg) && (regB_M !== 5'b0));
+    assign data = bypassWM ? data_writeReg : M_B;       // O: The data to write to dmem (data) [WM bypass]
+    assign wren = isSW_M;                               // O: Write enable for dmem (data)
+    assign W_D = isLW_M ? q_dmem : M_D;                 // I: The data from dmem (data)
     // ------ writeback ------ // 
     // WriteEnable = add + addi + lw
     wire [4:0] opcode_W;
@@ -290,7 +295,6 @@ module pulse_generator (
     
     // AND gate to generate the pulse
     assign out_pulse = q1 & ~q2;
-
 endmodule
 
 
