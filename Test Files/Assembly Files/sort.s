@@ -3,9 +3,9 @@ nop             # Author: Jack Proudfoot
 nop             
 nop
 init:
-addi $sp, $zero, 256        # $sp = 256
+addi $sp, $zero, 256        # $sp = 256 [c8]
 addi $27, $zero, 3840       # $27 = 3840 address for bottom of heap
-addi $t0, $zero, 50
+addi $t0, $zero, 50         # [c1-]
 addi $t1, $zero, 3
 sw $t1, 0($t0)
 addi $t1, $zero, 1

@@ -41,7 +41,7 @@ module processor(
     ctrl_readRegB,                  // O: Register to read from port B of RegFile
     data_writeReg,                  // O: Data to write to for RegFile
     data_readRegA,                  // I: Data from port A of RegFile
-    data_readRegB                   // I: Data from port B of RegFile
+    data_readRegB,                   // I: Data from port B of RegFile
 	);
 
 	// Control signals
@@ -79,6 +79,8 @@ module processor(
     register FD_PC(.clk(~clock), .d(PC), .q(D_PC_in), .en(~stall && ~hazard), .clr(reset));  
     assign D_PC = (hazard | flush) ? 32'b0 : D_PC_in;
     register DX_PC(.clk(~clock), .d(D_PC), .q(X_PC), .en(~stall), .clr(reset));
+    register XM_PC(.clk(~clock), .d(X_PC), .q(M_PC), .en(~stall), .clr(reset));
+    register MW_PC(.clk(~clock), .d(M_PC), .q(W_PC), .en(~stall), .clr(reset));
     // Instruction latch
     assign F_instr = (flush) ? 32'b0 : q_imem;
     register FD_instr(.clk(~clock), .d(F_instr), .q(D_instr), .en(~stall && ~hazard), .clr(reset));
@@ -175,7 +177,7 @@ module processor(
 
     // jr   00100          J2 jr $rd              PC = $rd
     assign jump_to_register = isJrX;
-    assign jump_register_destination = X_A; 
+    assign jump_register_destination = BypassX_A; 
 
 
     // Exception! - replace with write error to $r30 (error ALU and Multdiv)
