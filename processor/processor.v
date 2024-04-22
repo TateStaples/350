@@ -267,35 +267,6 @@ module get_instr(opcode, ALU_opcode, isAdd, isAddi, isSub, isAnd, IsOr, isSll, i
     assign isBex = (opcode == 5'b10110);
 endmodule
 
-
-module pulse_generator (
-    input wire clk,       // Clock input
-    input wire in_signal, // Input signal
-    output wire out_pulse // Output pulse
-);
-    wire q1, q2;
-    dffe_ref dff1 (
-        .clk(clk),
-        .d(in_signal),
-        .q(q1),
-        .en(1'b1),
-        .clr(1'b0)
-    );
-    
-    // Instantiating the second D Flip-Flop (delays the signal by one clock cycle)
-    dffe_ref dff2 (
-        .clk(clk),
-        .d(q1),
-        .q(q2),
-        .en(1'b1),
-        .clr(1'b0)
-    );
-    
-    // AND gate to generate the pulse
-    assign out_pulse = q1 & ~q2;
-endmodule
-
-
 module instruction_registers(instr, regA, regB, writeback_reg, will_writeback);
     input [31:0] instr;
     output [4:0] regA, regB, writeback_reg;
